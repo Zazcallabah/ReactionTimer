@@ -4,12 +4,14 @@ namespace ReactionTimer
 {
 	class StateTracker
 	{
+		readonly Random _r;
 		public State State { get; private set; }
 		public DateTime Mark { get; private set; }
-
+		public TimeSpan CountR { get; private set; }
 		public StateTracker()
 		{
 			Mark = DateTime.Now;
+			_r = new Random();
 		}
 
 		public void Toggle()
@@ -32,12 +34,10 @@ namespace ReactionTimer
 				case State.Low:
 				case State.High:
 					State = State.Counting;
+					CountR = TimeSpan.FromSeconds( _r.NextDouble() * 3.5 + 1 );
 					break;
 				case State.Counting:
 					State = State.Noise;
-					break;
-				case State.Noise:
-					State = State.Waiting;
 					break;
 				default:
 					State = State.Low;
