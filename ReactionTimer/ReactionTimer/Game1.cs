@@ -6,9 +6,6 @@ using Microsoft.Xna.Framework.Input;
 
 namespace ReactionTimer
 {
-	/// <summary>
-	/// This is the main type for your game
-	/// </summary>
 	public class Game1 : Microsoft.Xna.Framework.Game
 	{
 		GraphicsDeviceManager graphics;
@@ -26,23 +23,6 @@ namespace ReactionTimer
 			tracker = new StateTracker();
 		}
 
-		/// <summary>
-		/// Allows the game to perform any initialization it needs to before starting to run.
-		/// This is where it can query for any required services and load any non-graphic
-		/// related content.  Calling base.Initialize will enumerate through any components
-		/// and initialize them as well.
-		/// </summary>
-		protected override void Initialize()
-		{
-			// TODO: Add your initialization logic here
-
-			base.Initialize();
-		}
-
-		/// <summary>
-		/// LoadContent will be called once per game and is the place to load
-		/// all of your content.
-		/// </summary>
 		protected override void LoadContent()
 		{
 			// Create a new SpriteBatch, which can be used to draw textures.
@@ -55,20 +35,6 @@ namespace ReactionTimer
 
 		}
 
-		/// <summary>
-		/// UnloadContent will be called once per game and is the place to unload
-		/// all content.
-		/// </summary>
-		protected override void UnloadContent()
-		{
-			// TODO: Unload any non ContentManager content here
-		}
-
-		/// <summary>
-		/// Allows the game to run logic such as updating the world,
-		/// checking for collisions, gathering input, and playing audio.
-		/// </summary>
-		/// <param name="gameTime">Provides a snapshot of timing values.</param>
 		protected override void Update( GameTime gameTime )
 		{
 			// Allows the game to exit
@@ -77,24 +43,43 @@ namespace ReactionTimer
 
 			sample.Update();
 
+			var timertrigger = TimeSpan.FromMilliseconds( 250 );
+			var rest = TimeSpan.FromSeconds( 3 );
+
 			var pivot = 10;
 			var c = sample.Current;
 
 			if( c > pivot && tracker.State == State.Low || c <= pivot && tracker.State == State.High )
 				tracker.Toggle();
 
+			if( tracker.State == State.High && DateTime.Now.Ticks > tracker.Mark.Ticks + timertrigger.Ticks )
+			{
+				tracker.Next();
+			}
+
+			if( tracker.State == State.Counting && DateTime.Now.Ticks > tracker.Mark.Ticks + tracker.CountR.Ticks )
+			{
+				Beep.Play();
+				tracker.Next();
+			}
+
+			if( tracker.State == State.Noise && DateTime.Now.Ticks > tracker.Mark.Ticks + rest.Ticks )
+			{
+				tracker.Next();
+			}
 
 			base.Update( gameTime );
 		}
 
-		/// <summary>
-		/// This is called when the game should draw itself.
-		/// </summary>
-		/// <param name="gameTime">Provides a snapshot of timing values.</param>
 		protected override void Draw( GameTime gameTime )
 		{
 			var data = sample.Current;
-			GraphicsDevice.Clear( Color.Black );
+			var c = Color.Black;
+			if( tracker.State == State.Counting )
+				c = Color.Gray;
+			if( tracker.State == State.Noise )
+				c = Color.White;
+			GraphicsDevice.Clear( c );
 
 			spriteBatch.Begin();
 
