@@ -5,7 +5,6 @@ namespace ReactionTimer
 		Low,
 		High,
 		Counting,
-		Noise,
-		Waiting
+		Noise
 	}
 }
