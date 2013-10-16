@@ -8,89 +8,90 @@ namespace ReactionTimer
 {
 	public class Game1 : Microsoft.Xna.Framework.Game
 	{
-		GraphicsDeviceManager graphics;
-		SpriteBatch spriteBatch;
-		SpriteFont Consolas;
-		Texture2D Dot;
-		Sample sample;
-		SoundEffect Beep;
-		StateTracker tracker;
+		GraphicsDeviceManager _graphics;
+		SpriteBatch _spriteBatch;
+		SpriteFont _consolas;
+		Texture2D _dot;
+		Sample _sample;
+		SoundEffect _beep;
+		readonly StateTracker _tracker;
 
 		public Game1()
 		{
-			graphics = new GraphicsDeviceManager( this );
+			_graphics = new GraphicsDeviceManager( this );
 			Content.RootDirectory = "Content";
-			tracker = new StateTracker();
+			_tracker = new StateTracker();
 		}
 
 		protected override void LoadContent()
 		{
 			// Create a new SpriteBatch, which can be used to draw textures.
-			spriteBatch = new SpriteBatch( GraphicsDevice );
-			Consolas = Content.Load<SpriteFont>( "Consolas" );
-			Dot = Content.Load<Texture2D>( "Dot" );
-			Beep = Content.Load<SoundEffect>( "beep" );
+			_spriteBatch = new SpriteBatch( GraphicsDevice );
+			_consolas = Content.Load<SpriteFont>( "Consolas" );
+			_dot = Content.Load<Texture2D>( "Dot" );
+			_beep = Content.Load<SoundEffect>( "beep" );
 
-			sample = new Sample( 1, 0.1 );
+			_sample = new Sample( 1, 0.1 );
 
 		}
 
 		protected override void Update( GameTime gameTime )
 		{
-			// Allows the game to exit
-			if( GamePad.GetState( PlayerIndex.One ).Buttons.Back == ButtonState.Pressed )
-				this.Exit();
+			// Allows the application to exit
+			if( GamePad.GetState( PlayerIndex.One ).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown( Keys.Escape ) )
+				Exit();
 
-			sample.Update();
+			//record from mic
+			_sample.Update();
 
 			var timertrigger = TimeSpan.FromMilliseconds( 250 );
 			var rest = TimeSpan.FromSeconds( 3 );
 
 			var pivot = 10;
-			var c = sample.Current;
+			var c = _sample.AudioRMS;
 
-			if( c > pivot && tracker.State == State.Low || c <= pivot && tracker.State == State.High )
-				tracker.Toggle();
+			if( c > pivot && _tracker.CurrentState == State.Low || c <= pivot && _tracker.CurrentState == State.High )
+				_tracker.Toggle();
 
-			if( tracker.State == State.High && DateTime.Now.Ticks > tracker.Mark.Ticks + timertrigger.Ticks )
+			if( _tracker.CurrentState == State.High && DateTime.Now.Ticks > _tracker.Mark + timertrigger.Ticks )
 			{
-				tracker.Next();
+				_tracker.Next();
 			}
 
-			if( tracker.State == State.Counting && DateTime.Now.Ticks > tracker.Mark.Ticks + tracker.CountR.Ticks )
+			if( _tracker.CurrentState == State.Counting && DateTime.Now.Ticks > _tracker.Mark + _tracker.CountingInstanceDuration.Ticks )
 			{
-				Beep.Play();
-				tracker.Next();
+				_beep.Play();
+				_tracker.Next();
 			}
 
-			if( tracker.State == State.Noise && DateTime.Now.Ticks > tracker.Mark.Ticks + rest.Ticks )
+			if( _tracker.CurrentState == State.Noise && DateTime.Now.Ticks > _tracker.Mark + rest.Ticks )
 			{
-				tracker.Next();
+				_tracker.Next();
 			}
 
 			base.Update( gameTime );
 		}
-
+		int _max;
 		protected override void Draw( GameTime gameTime )
 		{
-			var data = sample.Current;
+			var data = _sample.AudioRMS;
 			var c = Color.Black;
-			if( tracker.State == State.Counting )
+			if( _tracker.CurrentState == State.Counting )
+				c = Color.DarkBlue;
+			if( _tracker.CurrentState == State.Noise )
 				c = Color.Gray;
-			if( tracker.State == State.Noise )
-				c = Color.White;
 			GraphicsDevice.Clear( c );
+			int load = (int) ( data * 3 );
+			_max = Math.Max( _max, load );
+			_spriteBatch.Begin();
 
-			spriteBatch.Begin();
+			_spriteBatch.DrawString( _consolas, data.ToString(), new Vector2( 80, 100 ), Color.Red );
+			_spriteBatch.DrawString( _consolas, new TimeSpan( _sample.Load ).ToString(), new Vector2( 80, 60 ), Color.Red );
+			_spriteBatch.DrawString( _consolas, _tracker.ToString(), new Vector2( 80, 120 ), Color.White );
+			_spriteBatch.Draw( _dot, new Rectangle( 10, 10, 30, _max ), Color.White );
+			_spriteBatch.Draw( _dot, new Rectangle( 12, 12, 26, load ), Color.Green );
 
-			spriteBatch.DrawString( Consolas, data.ToString(), new Vector2( 80, 100 ), Color.Red );
-			spriteBatch.DrawString( Consolas, new TimeSpan( sample.Load ).ToString(), new Vector2( 80, 60 ), Color.Red );
-			spriteBatch.DrawString( Consolas, tracker.ToString(), new Vector2( 80, 120 ), Color.White );
-			var height = 300;
-			spriteBatch.Draw( Dot, new Rectangle( 10, 10, 30, height ), Color.White );
-			spriteBatch.Draw( Dot, new Rectangle( 12, 12, 26, (int) ( data * 3 ) ), Color.Green );
-
-			spriteBatch.End();
+			_spriteBatch.End();
 
 
 			base.Draw( gameTime );
